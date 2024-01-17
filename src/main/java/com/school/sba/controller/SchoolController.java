@@ -16,9 +16,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.school.sba.util.ResponseStructure;
-
-import com.school.sba.Service.School_Service;
 import com.school.sba.entity.School;
+import com.school.sba.service.SchoolService;
 
 
 
@@ -27,7 +26,7 @@ import com.school.sba.entity.School;
 public class SchoolController {
 	
 	@Autowired
-	private School_Service school_service;
+	private SchoolService school_service;
 	
 //	//Response Structure
 	@PostMapping

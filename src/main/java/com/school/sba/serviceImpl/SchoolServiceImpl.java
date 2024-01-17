@@ -1,4 +1,4 @@
-package com.school.sba.serviceImpl;
+package com.school.sba.serviceimpl;
 
 import java.util.Optional;
 
@@ -7,10 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.school.sba.Repository.SchoolRepository;
-import com.school.sba.Service.School_Service;
 import com.school.sba.entity.School;
 import com.school.sba.exception.SchoolNotFoundByIdException;
+import com.school.sba.repository.SchoolRepository;
+import com.school.sba.service.SchoolService;
 import com.school.sba.util.ResponseStructure;
 
 import lombok.AllArgsConstructor;
@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Service
-public class SchoolServiceImpl implements School_Service {
+public class SchoolServiceImpl implements SchoolService {
 	
 	
 	@Autowired

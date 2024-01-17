@@ -1,4 +1,4 @@
-package com.school.sba.Service;
+package com.school.sba.service;
 
 import java.util.Optional;
 
@@ -10,7 +10,7 @@ import com.school.sba.util.ResponseStructure;
 
 
 
-public interface School_Service {
+public interface SchoolService {
 
 	
 

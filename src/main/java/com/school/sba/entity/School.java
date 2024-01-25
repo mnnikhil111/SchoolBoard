@@ -1,33 +1,44 @@
-package com.school.sba.entity;
+	package com.school.sba.entity;
+
+import java.util.List;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Getter
+
 @Setter
-@Data
-@AllArgsConstructor
+@Getter
+@Entity
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class School {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int schoolId;
 	private String schoolName;
-	private long contactNo;
-	private String emailId;
-	private String address;
+	private long schoolContactNumber;
+	private String schoolEmailId;
+	private String schoolAddress;
 	
 	
+	@OneToOne
+	private Schedule schedule;
 	
+	@OneToMany(mappedBy = "school")
+	private List<AcademicProgram> listOfAcademicPrograms;
 	
-
+	@OneToMany(mappedBy = "school")
+	private User user;
+	
 }

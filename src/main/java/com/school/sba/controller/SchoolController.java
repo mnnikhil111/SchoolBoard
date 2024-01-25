@@ -1,57 +1,52 @@
 package com.school.sba.controller;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.school.sba.util.ResponseStructure;
-import com.school.sba.entity.School;
+import com.school.sba.requestdto.SchoolRequest;
+import com.school.sba.responsedto.SchoolResponse;
 import com.school.sba.service.SchoolService;
+import com.school.sba.util.ResponseStructure;
 
-
-
-@RequestMapping("/schools")
 @RestController
 public class SchoolController {
 	
 	@Autowired
-	private SchoolService school_service;
-	
-//	//Response Structure
-	@PostMapping
-	public ResponseEntity<ResponseStructure<School>> addStudent(@RequestBody School school) {
-		return school_service.addSchool(school);
+	private SchoolService schoolService;
+		
+	@PreAuthorize("hasAuthority('ADMIN')")
+	@PostMapping("/users/schools")
+	public ResponseEntity<ResponseStructure<SchoolResponse>> createSchool( @RequestBody SchoolRequest schoolRequest){
+		return schoolService.createSchool(schoolRequest);
 	}
 	
-//	@GetMapping
-//	public ResponseEntity<ResponseStructure<School>> findStudent(@RequestParam int schoolId) {
-//		return school_service.findSchool(schoolId);
-//	}
-//	
-//	//update the student table 
-//	@PutMapping
-//	public ResponseEntity<ResponseStructure<School>> updateStudent(@RequestParam int schoolId,@RequestBody School school) {
-//		return school_service.updateSchool(schoolId, school);
-//	}
-//	
-//	
-//	//Delete the record by Id
-//	@DeleteMapping
-//	public ResponseEntity<ResponseStructure<School>> deleteStudent(@RequestParam int schoolId) {
-//		return school_service.deleteSchool(schoolId);
-//	}
-//	
+	@PreAuthorize("hasAuthority('ADMIN')")
+	@PutMapping("/schools/{schoolId}")
+	public ResponseEntity<ResponseStructure<SchoolResponse>> updateSchool(@PathVariable Integer schoolId, @RequestBody SchoolRequest schoolRequest){
+		return schoolService.updateSchool(schoolId, schoolRequest);
+	}
 	
+	
+/*
+	
+	@DeleteMapping("/schools/{schoolId}")
+	public ResponseEntity<ResponseStructure<SchoolResponse>> deleteSchool(@PathVariable Integer schoolId){
+		return schoolService.deleteSchool(schoolId);
+	}
+	
+	@GetMapping("/schools/{schoolId}")
+	public ResponseEntity<ResponseStructure<SchoolResponse>> findSchool(@PathVariable Integer schoolId){
+		return schoolService.findSchool(schoolId);
+	}
 
+*/
+	
 }

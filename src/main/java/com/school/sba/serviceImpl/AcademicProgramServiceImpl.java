@@ -1,6 +1,7 @@
-package com.school.sba.serviceimpl;
+package com.school.sba.serviceImpl;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,13 +12,20 @@ import org.springframework.stereotype.Service;
 
 import com.school.sba.entity.AcademicProgram;
 import com.school.sba.entity.Subject;
-import com.school.sba.exception.SchoolNotFoundByIdException;
+import com.school.sba.enums.ProgramType;
+import com.school.sba.exception.AcademicProgramNotFoundException;
+import com.school.sba.exception.InvalidProgramTypeException;
+import com.school.sba.exception.SchoolNotFoundException;
 import com.school.sba.repository.AcademicProgramRepository;
+import com.school.sba.repository.ClassHourRepository;
 import com.school.sba.repository.SchoolRepository;
 import com.school.sba.requestdto.AcademicProgramRequest;
 import com.school.sba.responsedto.AcademicProgramResponse;
 import com.school.sba.service.AcademicProgramService;
+import com.school.sba.util.ResponseEntityProxy;
 import com.school.sba.util.ResponseStructure;
+
+import jakarta.transaction.Transactional;
 
 
 @Service
@@ -28,17 +36,14 @@ public class AcademicProgramServiceImpl implements AcademicProgramService{
 
 	@Autowired
 	private SchoolRepository schoolRepository;
-
+	
 	@Autowired
-	private ResponseStructure<AcademicProgramResponse> structure;
-
-	@Autowired
-	private ResponseStructure<List<AcademicProgramResponse>> listStructure;
+	private ClassHourRepository classHourRepository;
 
 	public AcademicProgramResponse mapToAcademicProgramResponse(AcademicProgram academicProgram) {
 
 		List<String> subjects = new ArrayList<String>();
-		
+
 		List<Subject> listOfSubject = academicProgram.getListOfSubject();
 
 		if(listOfSubject != null) {
@@ -59,7 +64,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService{
 
 	private AcademicProgram mapToAcademicProgram(AcademicProgramRequest academicProgramRequest) {
 		return AcademicProgram.builder()
-				.programType(academicProgramRequest.getProgramType())
+				.programType(ProgramType.valueOf(academicProgramRequest.getProgramType().toUpperCase()))
 				.programName(academicProgramRequest.getProgramName())
 				.programBeginsAt(academicProgramRequest.getProgramBeginsAt())
 				.programEndsAt(academicProgramRequest.getProgramEndsAt())
@@ -69,6 +74,10 @@ public class AcademicProgramServiceImpl implements AcademicProgramService{
 	@Override
 	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> createProgram(int schoolId,
 			AcademicProgramRequest academicProgramRequest) {
+
+		ProgramType programType = ProgramType.valueOf(academicProgramRequest.getProgramType().toUpperCase());
+		if(!EnumSet.allOf(ProgramType.class).contains(programType))
+			throw new InvalidProgramTypeException("invalid program type");
 
 		return schoolRepository.findById(schoolId)
 				.map(school -> {
@@ -81,13 +90,12 @@ public class AcademicProgramServiceImpl implements AcademicProgramService{
 
 					academicProgram = academicProgramRepository.save(academicProgram);
 
-					structure.setStatus(HttpStatus.CREATED.value());
-					structure.setMessage("Academic program created successfully");
-					structure.setData(mapToAcademicProgramResponse(academicProgram));
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.CREATED,
+							"Academic program created successfully",
+							mapToAcademicProgramResponse(academicProgram));
 
-					return new ResponseEntity<ResponseStructure<AcademicProgramResponse>>(structure, HttpStatus.CREATED);
 				})
-				.orElseThrow(() -> new SchoolNotFoundByIdException("school not found"));
+				.orElseThrow(() -> new SchoolNotFoundException("school not found"));
 
 	}
 
@@ -103,21 +111,48 @@ public class AcademicProgramServiceImpl implements AcademicProgramService{
 							.collect(Collectors.toList());
 
 					if(listOfAcadmicProgram.isEmpty()) {
-						listStructure.setStatus(HttpStatus.NO_CONTENT.value());
-						listStructure.setMessage("no programs has been found");
-						listStructure.setData(listOfAcademicProgramResponse);
 
-						return new ResponseEntity<ResponseStructure<List<AcademicProgramResponse>>>(listStructure, HttpStatus.NO_CONTENT);
+						return ResponseEntityProxy.setResponseStructure(HttpStatus.NO_CONTENT,
+								"no programs found",
+								listOfAcademicProgramResponse);
 					}
 					else {
-						listStructure.setStatus(HttpStatus.FOUND.value());
-						listStructure.setMessage("found list of academic programs");
-						listStructure.setData(listOfAcademicProgramResponse);
 
-						return new ResponseEntity<ResponseStructure<List<AcademicProgramResponse>>>(listStructure, HttpStatus.FOUND);
+						return ResponseEntityProxy.setResponseStructure(HttpStatus.FOUND,
+								"found list of academic programs",
+								listOfAcademicProgramResponse);
 					}
 				})
-				.orElseThrow(() -> new SchoolNotFoundByIdException("school not found"));
+				.orElseThrow(() -> new SchoolNotFoundException("school not found"));
+	}
+
+	@Override
+	public ResponseEntity<ResponseStructure<AcademicProgramResponse>> softDeleteAcademicProgram(int programId) {
+		
+		return academicProgramRepository.findById(programId)
+				.map(academicProgram -> {
+					if(academicProgram.isDeleted()==true)
+						throw new AcademicProgramNotFoundException("academic program not found");
+					
+					academicProgram.setDeleted(true);
+					academicProgramRepository.save(academicProgram);
+
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+							"academic program deleted successfully",
+							mapToAcademicProgramResponse(academicProgram));
+				})
+				.orElseThrow(() -> new AcademicProgramNotFoundException("academic program not found"));
+	}
+
+	@Transactional
+	public void hardDeleteAcademicProgram() {
+		
+		academicProgramRepository.findByIsDeleted(true).forEach(academicProgram -> {
+			classHourRepository.deleteAll(academicProgram.getListOfClassHours());
+			
+			academicProgramRepository.delete(academicProgram);
+		});
+		
 	}
 
 

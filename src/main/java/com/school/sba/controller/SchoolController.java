@@ -30,23 +30,21 @@ public class SchoolController {
 	
 	@PreAuthorize("hasAuthority('ADMIN')")
 	@PutMapping("/schools/{schoolId}")
-	public ResponseEntity<ResponseStructure<SchoolResponse>> updateSchool(@PathVariable Integer schoolId, @RequestBody SchoolRequest schoolRequest){
+	public ResponseEntity<ResponseStructure<SchoolResponse>> updateSchool(@PathVariable("schoolId") int schoolId, @RequestBody SchoolRequest schoolRequest){
 		return schoolService.updateSchool(schoolId, schoolRequest);
 	}
 	
-	
-/*
-	
-	@DeleteMapping("/schools/{schoolId}")
-	public ResponseEntity<ResponseStructure<SchoolResponse>> deleteSchool(@PathVariable Integer schoolId){
-		return schoolService.deleteSchool(schoolId);
-	}
-	
 	@GetMapping("/schools/{schoolId}")
-	public ResponseEntity<ResponseStructure<SchoolResponse>> findSchool(@PathVariable Integer schoolId){
+	public ResponseEntity<ResponseStructure<SchoolResponse>> findSchool(@PathVariable("schoolId") int schoolId){
 		return schoolService.findSchool(schoolId);
 	}
+	
+	
+	@DeleteMapping("/schools/{schoolId}")
+	public ResponseEntity<ResponseStructure<SchoolResponse>> softDeleteSchool(@PathVariable("schoolId") int schoolId){
+		return schoolService.softDeleteSchool(schoolId);
+	}
 
-*/
+
 	
 }

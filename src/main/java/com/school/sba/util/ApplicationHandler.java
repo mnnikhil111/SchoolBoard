@@ -16,17 +16,31 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.school.sba.exception.AcademicProgramNotAssignedException;
 import com.school.sba.exception.AcademicProgramNotFoundException;
 import com.school.sba.exception.AdminAlreadyFoundException;
 import com.school.sba.exception.AdminCannotBeAssignedToAcademicProgram;
+import com.school.sba.exception.AdminCannotBeDeletedException;
 import com.school.sba.exception.AdminNotFoundException;
+import com.school.sba.exception.ClassCannotAssignedException;
+import com.school.sba.exception.ClassHourNotFoundException;
+import com.school.sba.exception.IdNotFoundException;
+import com.school.sba.exception.InvalidProgramTypeException;
+import com.school.sba.exception.InvalidUserRoleException;
+import com.school.sba.exception.InvalidWeekDayException;
+import com.school.sba.exception.NoAssociatedObjectsFoundException;
 import com.school.sba.exception.OnlyAdminCanCreateSchoolException;
 import com.school.sba.exception.OnlyTeacherCanBeAssignedToSubjectException;
+import com.school.sba.exception.RoomAlreadyAssignedException;
 import com.school.sba.exception.ScheduleAlreadyPresentException;
 import com.school.sba.exception.ScheduleNotFoundException;
+import com.school.sba.exception.SchoolAlreadyPresentException;
 import com.school.sba.exception.SchoolCannotBeCreatedException;
-import com.school.sba.exception.SchoolNotFoundByIdException;
+import com.school.sba.exception.SchoolNotFoundException;
+import com.school.sba.exception.SubjectCannotBeAssignedToStudentException;
+import com.school.sba.exception.SubjectNotAssignedToTeacherException;
 import com.school.sba.exception.SubjectNotFoundException;
+import com.school.sba.exception.TeacherNotFoundByIdException;
 import com.school.sba.exception.UserNotFoundByIdException;
 
 @RestControllerAdvice
@@ -56,9 +70,9 @@ public class ApplicationHandler extends ResponseEntityExceptionHandler {
 
 	}
 
-	@ExceptionHandler(SchoolNotFoundByIdException.class)
-	public ResponseEntity<Object> handleSchoolNotFoundByIdException(SchoolNotFoundByIdException exception) {
-		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "school not found by id in database");
+	@ExceptionHandler(SchoolNotFoundException.class)
+	public ResponseEntity<Object> handleSchoolNotFoundByIdException(SchoolNotFoundException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "school not found, try adding the school");
 	}
 
 	@ExceptionHandler(SchoolCannotBeCreatedException.class)
@@ -114,5 +128,75 @@ public class ApplicationHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(AdminAlreadyFoundException.class)
 	public ResponseEntity<Object> handleAdminAlreadyFoundException(AdminAlreadyFoundException exception) {
 		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "admin is already inserted");
+	}
+	
+	@ExceptionHandler(SubjectCannotBeAssignedToStudentException.class)
+	public ResponseEntity<Object> handleSubjectCannotBeAssignedToStudentException(SubjectCannotBeAssignedToStudentException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "subject cannot be assigned to subject");
+	}
+	
+	@ExceptionHandler(InvalidWeekDayException.class)
+	public ResponseEntity<Object> handleInvalidWeekDayException(InvalidWeekDayException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "week entered is invalid");
+	}
+	
+	@ExceptionHandler(InvalidProgramTypeException.class)
+	public ResponseEntity<Object> handleInvalidProgramTypeException(InvalidProgramTypeException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "program type entered is invalid");
+	}
+	
+	@ExceptionHandler(InvalidUserRoleException.class)
+	public ResponseEntity<Object> handleInvalidUserRoleException(InvalidUserRoleException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "user role entered is invalid");
+	}
+	
+	@ExceptionHandler(TeacherNotFoundByIdException.class)
+	public ResponseEntity<Object> handleTeacherNotFoundByIdException(TeacherNotFoundByIdException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "teacher not found with the given id");
+	}
+	
+	@ExceptionHandler(IdNotFoundException.class)
+	public ResponseEntity<Object> handleIdNotFoundException(IdNotFoundException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "specified id is not found");
+	}
+	
+	@ExceptionHandler(ClassHourNotFoundException.class)
+	public ResponseEntity<Object> handleClassHourNotFoundException(ClassHourNotFoundException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "class hour not foundn with the given id");
+	}
+	
+	@ExceptionHandler(SubjectNotAssignedToTeacherException.class)
+	public ResponseEntity<Object> handleSubjectNotAssignedToTeacherException(SubjectNotAssignedToTeacherException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "subject not assigned to teacher, try assigning the subject to teacher");
+	}
+	
+	@ExceptionHandler(SchoolAlreadyPresentException.class)
+	public ResponseEntity<Object> handleSchoolAlreadyPresentException(SchoolAlreadyPresentException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "school already present, try updating school");
+	}
+	
+	@ExceptionHandler(RoomAlreadyAssignedException.class)
+	public ResponseEntity<Object> handleRoomAlreadyAssignedException(RoomAlreadyAssignedException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "room already reserved for the given time");
+	}
+	
+	@ExceptionHandler(AcademicProgramNotAssignedException.class)
+	public ResponseEntity<Object> handleAcademicProgramNotAssignedException(AcademicProgramNotAssignedException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "academic program is not assigned");
+	}
+	
+	@ExceptionHandler(ClassCannotAssignedException.class)
+	public ResponseEntity<Object> handleClassCannotAssignedException(ClassCannotAssignedException exception) {
+		return structure(HttpStatus.BAD_REQUEST, exception.getMessage(), "class hour, subject and room number cannot be assigned to break time or lunch time");
+	}
+	
+	@ExceptionHandler(NoAssociatedObjectsFoundException.class)
+	public ResponseEntity<Object> handleNoAssociatedObjectsFoundException(NoAssociatedObjectsFoundException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "no associated data found with the specified program id and user role");
+	}
+	
+	@ExceptionHandler(AdminCannotBeDeletedException.class)
+	public ResponseEntity<Object> handleAdminCannotBeDeletedException(AdminCannotBeDeletedException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "no associated data found with the specified program id and user role");
 	}
 }

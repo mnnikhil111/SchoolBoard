@@ -1,9 +1,8 @@
 package com.school.sba.entity;
 
-import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalDateTime;
 
-import com.school.sba.enums.ProgramType;
+import com.school.sba.enums.ClassStatus;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,9 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,37 +19,32 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@Builder
 @Getter
 @Setter
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AcademicProgram {
+public class ClassHour {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int programId;
+	private int classHourId;
+	private LocalDateTime classBeginsAt;
+	private LocalDateTime classEndsAt;
+	private int classRoomNumber;
 	
 	@Enumerated(EnumType.STRING)
-	private ProgramType programType;
-	
-	private String programName;
-	private LocalDate programBeginsAt;
-	private LocalDate programEndsAt;
-	
-	private boolean isDeleted;
+	private ClassStatus classStatus;
 	
 	@ManyToOne
-	@JoinColumn(name = "schoolId")
-	private School school;
+	@JoinColumn(name = "academicProgramId")
+	private AcademicProgram academicPrograms;
 	
-	@ManyToMany
-	private List<Subject> listOfSubject;
+	@ManyToOne
+	@JoinColumn(name = "subjectId")
+	private Subject subject;
 	
-	@ManyToMany
-	private List<User> listOfUsers;
-	
-	@OneToMany(mappedBy = "academicPrograms")
-	private List<ClassHour> listOfClassHours;
-
+	@ManyToOne
+	@JoinColumn(name = "userId")
+	private User user;
 }

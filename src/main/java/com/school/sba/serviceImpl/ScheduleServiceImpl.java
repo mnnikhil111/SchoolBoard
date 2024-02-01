@@ -1,4 +1,4 @@
-package com.school.sba.serviceimpl;
+package com.school.sba.serviceImpl;
 
 import java.time.Duration;
 
@@ -11,12 +11,13 @@ import com.school.sba.entity.Schedule;
 import com.school.sba.entity.School;
 import com.school.sba.exception.ScheduleAlreadyPresentException;
 import com.school.sba.exception.ScheduleNotFoundException;
-import com.school.sba.exception.SchoolNotFoundByIdException;
+import com.school.sba.exception.SchoolNotFoundException;
 import com.school.sba.repository.ScheduleRepository;
 import com.school.sba.repository.SchoolRepository;
 import com.school.sba.requestdto.ScheduleRequest;
 import com.school.sba.responsedto.ScheduleResponse;
 import com.school.sba.service.ScheduleService;
+import com.school.sba.util.ResponseEntityProxy;
 import com.school.sba.util.ResponseStructure;
 
 @Service
@@ -27,9 +28,6 @@ public class ScheduleServiceImpl implements ScheduleService{
 
 	@Autowired
 	private SchoolRepository schoolRepository;
-
-	@Autowired
-	private ResponseStructure<ScheduleResponse> structure;
 
 
 	private ScheduleResponse mapToScheduleResponse(Schedule schedule) {		
@@ -77,18 +75,16 @@ public class ScheduleServiceImpl implements ScheduleService{
 						school.setSchedule(schedule);
 
 						schoolRepository.save(school);
-
-						structure.setStatus(HttpStatus.CREATED.value());
-						structure.setMessage("schedule added successfully");
-						structure.setData(mapToScheduleResponse(schedule));
-
-						return new ResponseEntity<ResponseStructure<ScheduleResponse>>(structure, HttpStatus.CREATED);
+						
+						return ResponseEntityProxy.setResponseStructure(HttpStatus.CREATED,
+								"schedule added successfully",
+								mapToScheduleResponse(schedule));
 					}
 					else {
 						throw new ScheduleAlreadyPresentException("Schedule is already added");
 					}
 				})
-				.orElseThrow(() -> new SchoolNotFoundByIdException("school not found"));
+				.orElseThrow(() -> new SchoolNotFoundException("school not found"));
 
 	}
 
@@ -96,15 +92,14 @@ public class ScheduleServiceImpl implements ScheduleService{
 	public ResponseEntity<ResponseStructure<ScheduleResponse>> findSchedule(int schoolId) {
 
 		School school = schoolRepository.findById(schoolId)
-				.orElseThrow(() -> new SchoolNotFoundByIdException("School not found"));
+				.orElseThrow(() -> new SchoolNotFoundException("School not found"));
 
 		return scheduleRepository.findById(school.getSchedule().getScheduleId())
 				.map(schedule -> {
-					structure.setStatus(HttpStatus.FOUND.value());
-					structure.setMessage("schedule found");
-					structure.setData(mapToScheduleResponse(schedule));
-
-					return new ResponseEntity<ResponseStructure<ScheduleResponse>>(structure, HttpStatus.FOUND);
+					
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.FOUND,
+							"schedule found",
+							mapToScheduleResponse(schedule));
 				})
 				.orElseThrow(() -> new ScheduleNotFoundException("schedule not found"));
 
@@ -120,15 +115,21 @@ public class ScheduleServiceImpl implements ScheduleService{
 					mapToSchedule.setScheduleId(scheduleId);
 					schedule = scheduleRepository.save(mapToSchedule);
 
-					structure.setStatus(HttpStatus.OK.value());
-					structure.setMessage("schedule updated successfully");
-					structure.setData(mapToScheduleResponse(schedule));
-
-					return new ResponseEntity<ResponseStructure<ScheduleResponse>>(structure, HttpStatus.OK);
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+							"schedule updated successfully",
+							mapToScheduleResponse(schedule));
 				})
 				.orElseThrow(() -> new ScheduleNotFoundException("schedule not found"));
-
 	}
 
+	
+//	public void deleteSchedule(Schedule schedule) {
+//		Schedule schedule2 = scheduleRepository.findById(schedule.getScheduleId())
+//		.map(fetchedSchedule -> {
+//			scheduleRepository.delete(fetchedSchedule);
+//			return fetchedSchedule;
+//		})
+//		.orElseThrow(() -> new ScheduleNotFoundException("schedule not found"));
+//	}
 
 }

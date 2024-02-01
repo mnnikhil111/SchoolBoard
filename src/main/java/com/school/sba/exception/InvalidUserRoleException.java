@@ -5,7 +5,8 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class AcademicProgramNotFoundException extends RuntimeException{
+public class InvalidUserRoleException extends RuntimeException {
+
 	/**
 	 * 
 	 */

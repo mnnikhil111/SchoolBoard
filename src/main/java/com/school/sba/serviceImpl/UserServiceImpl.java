@@ -1,7 +1,9 @@
-package com.school.sba.serviceimpl;
+package com.school.sba.serviceImpl;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,28 +18,31 @@ import com.school.sba.enums.UserRole;
 import com.school.sba.exception.AcademicProgramNotFoundException;
 import com.school.sba.exception.AdminAlreadyFoundException;
 import com.school.sba.exception.AdminCannotBeAssignedToAcademicProgram;
+import com.school.sba.exception.AdminCannotBeDeletedException;
 import com.school.sba.exception.AdminNotFoundException;
+import com.school.sba.exception.InvalidUserRoleException;
+import com.school.sba.exception.NoAssociatedObjectsFoundException;
 import com.school.sba.exception.OnlyTeacherCanBeAssignedToSubjectException;
 import com.school.sba.exception.SubjectNotFoundException;
 import com.school.sba.exception.UserNotFoundByIdException;
 import com.school.sba.repository.AcademicProgramRepository;
-import com.school.sba.repository.SchoolRepository;
+import com.school.sba.repository.ClassHourRepository;
 import com.school.sba.repository.SubjectRepository;
 import com.school.sba.repository.UserRepository;
 import com.school.sba.requestdto.UserRequest;
 import com.school.sba.responsedto.UserResponse;
 import com.school.sba.service.UserService;
+import com.school.sba.util.ResponseEntityProxy;
 import com.school.sba.util.ResponseStructure;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-	
-	@Autowired
-	private SchoolRepository schoolRepository;
-	
+
 	@Autowired
 	private UserRepository userRepository;
 
@@ -48,9 +53,7 @@ public class UserServiceImpl implements UserService {
 	private SubjectRepository subjectRepository;
 
 	@Autowired
-	private ResponseStructure<UserResponse> structure;
-
-	
+	private ClassHourRepository classHourRepository;
 
 	private User mapToUser(UserRequest userRequest) {
 		return User.builder().userName(userRequest.getUserName())
@@ -59,14 +62,14 @@ public class UserServiceImpl implements UserService {
 				.userLastName(userRequest.getUserLastName())
 				.userEmail(userRequest.getUserEmail())
 				.userContact(userRequest.getUserContact())
-				.userRole(userRequest.getUserRole())
+				.userRole(UserRole.valueOf(userRequest.getUserRole().toUpperCase()))
 				.school(userRequest.getSchool())
 				.build();
 	}
 
 
 
-	private UserResponse mapToUserResponse(User user) {
+	public UserResponse mapToUserResponse(User user) {
 
 		List<String> listOfProgramName = new ArrayList<>();
 
@@ -89,134 +92,137 @@ public class UserServiceImpl implements UserService {
 				.build();
 	}
 
-	
-	
+
+
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> registerAdmin(UserRequest userRequest) {
-		
-		if(userRequest.getUserRole().equals(UserRole.ADMIN)) {
-			
-			if (userRepository.existsByIsDeletedAndUserRole(false , userRequest.getUserRole()))  {
+
+		UserRole userRole = UserRole.valueOf(userRequest.getUserRole().toUpperCase());
+		if(!EnumSet.allOf(UserRole.class).contains(userRole))
+			throw new InvalidUserRoleException("invalid user role");
+
+		if(userRole.equals(UserRole.ADMIN)) {
+
+			if (userRepository.existsByIsDeletedAndUserRole(false , userRole))  {
 				throw new AdminAlreadyFoundException("Admin already exist");
 			} 
 			else {
-				if(userRepository.existsByIsDeletedAndUserRole(true, userRequest.getUserRole())) {
+				if(userRepository.existsByIsDeletedAndUserRole(true, userRole)) {
 					User user = userRepository.save(mapToUser(userRequest));
 
-					structure.setStatus(HttpStatus.CREATED.value());
-					structure.setMessage("user saved successfully");
-					structure.setData(mapToUserResponse(user));
-
-					return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.CREATED,
+							"admin saved successfully",
+							mapToUserResponse(user));
 				}
 				else {
 					User user = userRepository.save(mapToUser(userRequest));
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.CREATED,
+							"admin saved successfully",
+							mapToUserResponse(user));
 
-					structure.setStatus(HttpStatus.CREATED.value());
-					structure.setMessage("user saved successfully");
-					structure.setData(mapToUserResponse(user));
-
-					return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);	
 				}
 			}
 		}
 		else {
 			throw new AdminNotFoundException("admin not found");
 		}
-		
 	}
-	
-	
+
+
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> addOtherUser(UserRequest userRequest) {
-		
+
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		
-		if(userRequest.getUserRole().equals(UserRole.ADMIN)) {
+
+		UserRole userRole = UserRole.valueOf(userRequest.getUserRole().toUpperCase());
+		if(!EnumSet.allOf(UserRole.class).contains(userRole))
+			throw new InvalidUserRoleException("invalid user role");
+
+		if(userRole.equals(UserRole.ADMIN)) {
 			throw new AdminAlreadyFoundException("admin already found");
 		}
 		else {
 			return userRepository.findByUserName(username).map(admin -> {
 				School school = admin.getSchool();
-				
+
 				User user = userRepository.save(mapToUser(userRequest));
 				user.setSchool(school);
 				user = userRepository.save(user);
-				
-				
-				structure.setStatus(HttpStatus.CREATED.value());
-				structure.setMessage( user.getUserRole().name() +" saved successfully");
-				structure.setData(mapToUserResponse(user));
 
-				return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
-				
+				return ResponseEntityProxy.setResponseStructure(HttpStatus.CREATED,
+						user.getUserRole().name().toLowerCase() +" saved successfully",
+						mapToUserResponse(user));
+
 			})
-			.orElseThrow(() -> new AdminNotFoundException("admin not found"));		
+					.orElseThrow(() -> new AdminNotFoundException("admin not found"));		
 		}
 	}
-	
-	
-	
-	
+
+
+
+
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> findUser(Integer userId) {
 
 		return userRepository.findById(userId)
 				.map(user -> {
-					structure.setStatus(HttpStatus.FOUND.value());
-					structure.setMessage("user found successfully");
-					structure.setData(mapToUserResponse(user));
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.FOUND,
+							"user found successfully",
+							mapToUserResponse(user));
 
-					return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.FOUND);
 				})
 				.orElseThrow(() -> new UserNotFoundByIdException("user not found"));
 
-		
+
 	}
-	
-	
+
+
 
 	@Override
-	public ResponseEntity<ResponseStructure<UserResponse>> deleteUser(int userId) {
+	public ResponseEntity<ResponseStructure<UserResponse>> softDeleteUser(int userId) {
 		return userRepository.findById(userId)
 				.map(user -> {
 					if(user.isDeleted()) {
 						throw new UserNotFoundByIdException("User already deleted");
 					}
+					
+					if(user.getUserRole().equals(UserRole.ADMIN)) {
+						throw new AdminCannotBeDeletedException("admin cannot be deleted");
+					}
 
 					user.setDeleted(true);
 					userRepository.save(user);
 
-					structure.setStatus(HttpStatus.OK.value());
-					structure.setMessage("user deleted successfully");
-					structure.setData(mapToUserResponse(user));
-
-					return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.OK);
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+							"user deleted successfully",
+							mapToUserResponse(user));
 				})
 				.orElseThrow(() -> new UserNotFoundByIdException("user not found"));
-		
+
 	}
 
-	
-	
+
+
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> updateUser(int userId, UserRequest userRequest) {
+
+		UserRole userRole = UserRole.valueOf(userRequest.getUserRole().toUpperCase());
+		if(!EnumSet.allOf(UserRole.class).contains(userRole))
+			throw new InvalidUserRoleException("invalid user role");
 
 		return userRepository.findById(userId)
 				.map( user -> {
 					User mappedUser = mapToUser(userRequest);
 					mappedUser.setUserId(userId);
 					user = userRepository.save(mappedUser);
-					
-					structure.setStatus(HttpStatus.OK.value());
-					structure.setMessage("user updated successfully");
-					structure.setData(mapToUserResponse(user));
 
-					return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.OK);
+					return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+							"user updated successfully",
+							mapToUserResponse(user));
 				})
 				.orElseThrow(() -> new UserNotFoundByIdException("user not found"));
 	}
-	
+
 
 
 	@Override
@@ -230,18 +236,37 @@ public class UserServiceImpl implements UserService {
 					else {
 						return academicProgramRepository.findById(programId)
 								.map(academicProgram -> {
-									academicProgram.getListOfUsers().add(user);
-									user.getListOfAcademicPrograms().add(academicProgram);
 
-									userRepository.save(user);
-									academicProgramRepository.save(academicProgram);
+									if(user.getUserRole().equals(UserRole.TEACHER)) {
 
-									structure.setStatus(HttpStatus.OK.value());
-									structure.setMessage("assigned to academic program successfully");
-									structure.setData(mapToUserResponse(user));
+										if(academicProgram.getListOfSubject().contains(user.getSubject())) {
 
-									return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.OK);
+											academicProgram.getListOfUsers().add(user);		
+											user.getListOfAcademicPrograms().add(academicProgram);
 
+											userRepository.save(user);
+											academicProgramRepository.save(academicProgram);
+
+											return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+													user.getUserRole().name().toLowerCase() + " assigned to academic program successfully",
+													mapToUserResponse(user));
+
+										}
+										else {
+											throw new SubjectNotFoundException("subject not found");
+										}
+									}
+									else {
+										academicProgram.getListOfUsers().add(user);		
+										user.getListOfAcademicPrograms().add(academicProgram);
+
+										userRepository.save(user);
+										academicProgramRepository.save(academicProgram);
+
+										return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+												user.getUserRole().name().toLowerCase() + " assigned to academic program successfully",
+												mapToUserResponse(user));										
+									}
 								})
 								.orElseThrow(() -> new AcademicProgramNotFoundException("academic program not found"));
 					}
@@ -250,7 +275,8 @@ public class UserServiceImpl implements UserService {
 
 	}
 
-	
+
+
 
 	@Override
 	public ResponseEntity<ResponseStructure<UserResponse>> assignSubjectToTeacher(int subjectId, int userId) {
@@ -262,11 +288,10 @@ public class UserServiceImpl implements UserService {
 									user.setSubject(subject);
 									userRepository.save(user);
 
-									structure.setStatus(HttpStatus.OK.value());
-									structure.setMessage("subject assigned to teacher successfully");
-									structure.setData(mapToUserResponse(user));
+									return ResponseEntityProxy.setResponseStructure(HttpStatus.OK,
+											"subject assigned to teacher successfully",
+											mapToUserResponse(user));
 
-									return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.OK);
 								})
 								.orElseThrow(() -> new SubjectNotFoundException("subject not found"));
 					}
@@ -277,5 +302,59 @@ public class UserServiceImpl implements UserService {
 				.orElseThrow(() -> new UserNotFoundByIdException("user not found"));
 	}
 
+
+
+	@Override
+	public ResponseEntity<ResponseStructure<List<UserResponse>>> findAllByRole(int programId, String userRole) {
+
+		return academicProgramRepository.findById(programId)
+				.map(academicProgram -> {
+					UserRole roleOfUser = UserRole.valueOf(userRole.toUpperCase());
+
+					if(roleOfUser.equals(UserRole.ADMIN))
+						throw new IllegalArgumentException("admin cannot be fetched");
+
+					if(EnumSet.allOf(UserRole.class).contains(roleOfUser)){
+
+						List<UserResponse> collect = userRepository.
+								findByUserRoleAndListOfAcademicPrograms(roleOfUser, academicProgram)
+								.stream()
+								.map(this::mapToUserResponse)
+								.collect(Collectors.toList());
+
+						if(collect.isEmpty()) {
+							throw new NoAssociatedObjectsFoundException("academic program not found with "+programId+" and userrole with "+userRole);
+						}
+						else {
+							return ResponseEntityProxy.setResponseStructure(HttpStatus.FOUND,
+									"list of " + userRole + " found successfully",
+									collect);
+						}
+					}
+					else {
+						throw new InvalidUserRoleException("user role is incorrect");
+					}
+				})
+				.orElseThrow(() -> new AcademicProgramNotFoundException("academic program not found"));
+	}
+
+	@Transactional
+	public void hardDeleteUser() {
+		
+		userRepository.findByIsDeleted(true).forEach(user -> {
+			
+			user.getListOfAcademicPrograms().forEach(ap -> {
+				ap.setListOfUsers(null);
+			});
+			
+			classHourRepository.findByUser(user).forEach(classHour -> {
+				classHour.setUser(null);
+			});
+			
+			userRepository.delete(user);
+			
+		});
+		
+	}
 
 }

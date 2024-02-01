@@ -5,10 +5,12 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class AcademicProgramNotFoundException extends RuntimeException{
+public class InvalidWeekDayException extends RuntimeException {
+
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	private String message;
+
 }

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.school.sba.repository.AcademicProgramRepository;
 import com.school.sba.serviceImpl.*;
+
 @Component
 public class ScheduledJobs {
 
